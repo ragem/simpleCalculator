@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Text.RegularExpressions;
 
 namespace calculator
 {
@@ -15,216 +16,330 @@ namespace calculator
         public Form1()
         {
             InitializeComponent();
-        }
-
-        List<double> nums = new List<double>();
-        List<string> func = new List<string>();
-       // double[] nums = new double[100];
-       // char[] function = new char[100];
-     
-        bool eqpress = false;
-        bool square = false;
-        bool scoregot = false;
-
-        double result = 0;
-        private void Form1_Load(object sender, EventArgs e)
-        {
 
         }
-
-        private void Button_Click(object sender, EventArgs e)
+        bool operationCheck;
+        bool functionCheck;
+        bool clearNext;
+        bool isResult;
+        bool isOldText;
+        string previousText;
+        operations currentOperation = operations.NULL;
+        enum operations
         {
-            Button b = (Button)sender;
-            string btnchar = b.Text.ToString();
-            if(!isspecial(btnchar)) tb.Text += b.Text.ToString();
+            plus,
+            minus,
+            dalit,
+            reizinat,
+            kapinat,
+            NULL
+        }
 
-            if (isspecial(btnchar))
+
+        private void showText(string text, bool clear = true)
+        {
+            try
+            {
+                if (text.Equals("0,")) text = "0,";
+               else if (double.Parse(text) == 0)
+                    text = "0";
+            }
+            catch
+            {
+
+            }
+            clearNext = clear;
+            tb.Text = text;
+        }
+
+
+
+        private void updatehistory(string equation, bool pievienot = false)
+        {
+           // equation = Regex.Replace(equation, @"(\d+)\.\s", "$1 ");
+            if (!pievienot)
+                history.Text = equation;
+            else
+                history.Text += equation;
+        }
+
+
+
+
+        private double getNumber()
+        {
+            double number = double.Parse(tb.Text);
+            return number;
+        }
+
+        private void calculateResult()
+        {
+            if (currentOperation == operations.NULL)
+                return;
+
+            double a = double.Parse(previousText);
+            double b = double.Parse(tb.Text);
+            double result;
+
+            switch (currentOperation)
+            {
+                case operations.dalit:
+                    result = a / b;
+                    break;
+                case operations.reizinat:
+                    result = a * b;
+                    break;
+                case operations.plus:
+                    result = a + b;
+                    break;
+                case operations.minus:
+                    result = a - b;
+                    break;
+                case operations.kapinat:
+                    result = Math.Pow(a, b);
+                    break;
+                default:
+                    return;
+            }
+
+
+            operationCheck = false;
+            previousText = null;
+            string equation;
+            if (!functionCheck)
+                equation = history.Text + b.ToString();
+            else
+            {
+                equation = history.Text;
+                functionCheck = false;
+            }
+            updatehistory(equation);
+            showText(result.ToString());
+            currentOperation = operations.NULL;
+            isResult = true;
+        }
+
+ 
+        private void numberClick(object sender, EventArgs e)
+        {
+            isResult = false;
+            Button button = (Button)sender;
+
+            if (tb.Text == "0")
+                tb.Clear();
+
+            string text;
+
+            if (clearNext)
             {
                 
-                result = double.Parse(tb.Text.ToString());
-                func.Clear();
-                nums.Clear();
-                if (btnchar == "SQRT") result = Math.Sqrt(result);
-                if (btnchar == "1/x") result = 1 / result;
-                if (btnchar == "x^2") result = result*result;
-                tb.Text = result.ToString();
+                text = button.Text.ToString();
+                isOldText = false;
             }
-           else if (isop(btnchar))
+            else
+                text = tb.Text + button.Text.ToString();
+
+            if (!operationCheck && history.Text != "")
+                updatehistory("");
+            showText(text, false);
+        }
+
+
+        private void function(object sender, EventArgs e)
+        {
+
+
+            Button button = (Button)sender;
+            string buttonText = button.Text.ToString();
+            double number = getNumber();
+            string equation = "";
+            string result = "";
+
+            switch (buttonText)
             {
-                string txt = tb.Text.ToString();
-                txt = txt.Remove(txt.Length - 1);
-                if(!scoregot)nums.Add(double.Parse(txt));
-                func.Add(btnchar);
-                
-                tb.Text = "";
+                case "1/x":
+                    equation = "1 / " + number;
+                    double temp = 1 / number;
+                    result = temp.ToString();
+                    break;
+
+                case "√":
+                    equation = "√(" + number + ")";
+                    result = Math.Sqrt(number).ToString();
+                    break;
             }
+
+            if (operationCheck)
+            {
+                equation = history.Text + equation;
+                functionCheck = true;
+            }
+
+            updatehistory(equation);
+            showText(result);
+        }
+
+
+
+
+        private void operation(object sender, EventArgs e)
+        {
+
+            if (operationCheck && !isOldText)
+                calculateResult();
+
+            Button button = (Button)sender;
+
+            operationCheck = true;
+            previousText = tb.Text;
+            string buttonText = button.Text.ToString();
+            string equation = previousText + " " + buttonText + " ";
+            switch (buttonText)
+            {
+                case "/":
+                    currentOperation = operations.dalit;
+                    break;
+                case "*":
+                    currentOperation = operations.reizinat;
+                    break;
+                case "-":
+                    currentOperation = operations.minus;
+                    break;
+                case "+":
+                    currentOperation = operations.plus;
+                    break;
+                case "^":
+                    currentOperation = operations.kapinat;
+                    break;
+            }
+            updatehistory(equation);
             
-            eqpress = false;
-            scoregot = false;
+            showText(tb.Text);
+            isOldText = true;
+        }
+        private void komat_Click(object sender, EventArgs e)
+        {
+            if (!tb.Text.Contains(","))
+            {
+                string text = tb.Text += ",";
+               // MessageBox.Show(text,text);
+                showText(text, false);
+            }
         }
 
-        private void button19_Click(object sender, EventArgs e)
+
+        private void C_Click(object sender, EventArgs e)
         {
-            string temp = tb.Text.ToString();
-            temp = temp.Remove(temp.Length-1);
-            tb.Text = temp;
+            tb.Text = "0";
+            operationCheck = false;
+            previousText = null;
+            updatehistory("");
+           
         }
 
-        private Boolean isspecial(string a)
+        private void CE_Click(object sender, EventArgs e)
         {
-            if ((a.Equals("SQRT")) || (a.Equals("1/x")) || (a.Equals("x^2"))) return true;
-            else return false;
+            tb.Text = "0";
             
         }
 
-        private Boolean isop(string a)
+        private void backspace_Click(object sender, EventArgs e)
         {
-            if ((a.Equals("+")) || (a.Equals("-")) || (a.Equals("*")) || (a.Equals("/"))) return true;
-            else return false;
+            if (isResult)
+                return;
+
+            string text;
+
+            if (tb.Text.Length == 1)
+                text = "0";
+            else
+                text = tb.Text.Substring(0, tb.Text.Length - 1);
+
+            showText(text, false);
 
         }
 
         private void button12_Click(object sender, EventArgs e)
         {
-            if (nums.Count == func.Count) { func.RemoveAt(func.Count - 1); tb.Text = calculate().ToString(); }
+            calculateResult();
 
-                if (square) squareing(double.Parse(tb.Text.ToString()));
-
-            if((!eqpress)|| (nums.Count == func.Count))
-            {
-nums.Add(double.Parse(tb.Text.ToString()));
-tb.Text = calculate().ToString();
-
-            }
-            
-            
-            tb.SelectionStart = tb.Text.Length;
-            tb.SelectionLength = 0;
         }
 
-        private double calculate()
+        private void button20_Click(object sender, EventArgs e)
+        {
+            double number = getNumber();
+            double last = double.Parse(previousText);
+            double result1 = number * 0.01 * last;
+            tb.Text = result1.ToString();
+
+        }
+
+        private void button24_Click(object sender, EventArgs e)
+        {
+            if (tb.Text.Contains("-"))
+                tb.Text = tb.Text.Replace("-", "");
+            else tb.Text = tb.Text.Insert(0,"-");
+        }
+
+        private void Form1_KeyPress(object sender, KeyPressEventArgs e)
         {
             
-            if (eqpress)
+            if (e.KeyChar == (char)13) { MessageBox.Show("lol","lol"); button12.PerformClick();}
+            else
+            switch(e.KeyChar.ToString())
             {
-                nums.Add(nums.Last());
-                func.Add(func.Last());
-                
+                case "0":
+                    button0.PerformClick();
+                    break;
+                case "1":
+                    button1.PerformClick();
+                    break;
+                case "2":
+                    button2.PerformClick();
+                    break;
+                case "3":
+                    button3.PerformClick();
+                    break;
+                case "4":
+                    button4.PerformClick();
+                    break;
+                case "5":
+                    button5.PerformClick();
+                    break;
+                case "6":
+                    button6.PerformClick();
+                    break;
+                case "7":
+                    button7.PerformClick();
+                    break;
+                case "8":
+                    button8.PerformClick();
+                    break;
+                case "9":
+                    button9.PerformClick();
+                    break;
+                case "+":
+                    button13.PerformClick();
+                    break;
+                case "-":
+                    button14.PerformClick();
+                    break;
+                case "/":
+                    button16.PerformClick();
+                    break;
+                case "*":
+                    button15.PerformClick();
+                    break;
+                case "^":
+                    button22.PerformClick();
+                    break;
             }
-            
-            double[] numbers = nums.ToArray();
-            string[] operators = func.ToArray();
-           // MessageBox.Show(string.Join(" ", numbers) + "\n" + string.Join(" ", operators), "lol");
-            int i = operators.Length;
-           double value = numbers[0];
-            for(int k=0;k<i;k++)
-            {
-                
-                if (operators[k] == "+") value +=numbers[k + 1];
-                if (operators[k] == "-") value =value -numbers[k + 1];
-                if (operators[k] == "*") value =value*numbers[k + 1];
-                if (operators[k] == "/") value =value/numbers[k + 1];
-               
-
-            }
-            eqpress = true;
-            scoregot = true;
-            return value;
+            tb.Focus();
         }
 
-        private void button17_Click(object sender, EventArgs e) // CE
+        private void Form1_Load(object sender, EventArgs e)
         {
-            tb.Text = "";
-        }
-
-        private void button18_Click(object sender, EventArgs e) //C
-        {
-            nums.Clear();
-            func.Clear();
-            eqpress = false;
-            scoregot = false;
-            tb.Text = "";
-        }
-
-        private void tb_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (e.KeyChar == ',') e.Handled = false;
-           else if((!Char.IsNumber(e.KeyChar))&&(!Char.IsControl(e.KeyChar)))
-            {
-                
-                 if (e.KeyChar == '+') add("+");
-                else if (e.KeyChar == '-') add("-");
-                else if (e.KeyChar == '*') add("*");
-                else if (e.KeyChar == '/') add("/");
-              
-                else if (e.KeyChar == '=')
-                {
-
-                    if (nums.Count == func.Count) { func.RemoveAt(func.Count - 1); tb.Text = calculate().ToString(); }
-
-                    if (square) squareing(double.Parse(tb.Text.ToString()));
-
-                    if ((!eqpress) || (nums.Count == func.Count))
-                    {
-                        nums.Add(double.Parse(tb.Text.ToString()));
-                        tb.Text = calculate().ToString();
-
-                    }
-                    tb.Text = calculate().ToString();
-                    tb.SelectionStart = tb.Text.Length;
-                    tb.SelectionLength = 0;
-                    e.Handled = true;
-                }
-                else if (e.KeyChar == '^')
-                {
-                    square = true;
-                    result = double.Parse(tb.Text.ToString());
-                    tb.Text = "";
-                }
-                else
-                {
-                    e.Handled = false;
-                    
-                }
-              
-                    
-                
-
-                
-                 e.Handled = true;
-            }
-           else if ((e.KeyChar == (char)Keys.Enter))
-            {
-                if(square) squareing(double.Parse(tb.Text.ToString()));
-                else {
-                    if ((!eqpress))
-                        nums.Add(double.Parse(tb.Text.ToString()));
-                    tb.Text = calculate().ToString();
-                    tb.SelectionStart = tb.Text.Length;
-                    tb.SelectionLength = 0;
-                }
-            }
            
-        }
-        private void add(string oper)
-        {
-                string txt = tb.Text.ToString();
-                //txt = txt.Remove(txt.Length - 1);
-            //MessageBox.Show(txt,txt);
-                if (!scoregot) nums.Add(double.Parse(txt));
-                func.Add(oper);
-                tb.Text = "";
-            eqpress = false;
-        }
-        private void squareing(double num)
-        {
-            tb.Text = "";
-            func.Clear();
-            nums.Clear();
-            result=Math.Pow(result,num);
-            tb.Text = result.ToString();
-            scoregot = true;
-            square = false;
         }
     }
        
